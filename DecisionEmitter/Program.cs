@@ -1,7 +1,8 @@
 ﻿var random = new Random();
 var decisionId = "volume-setting";
 var events = new List<DecisionChanged>();
-var seen = new HashSet<string>();
+var seenStore = new MemoryStore<HashSet<string>>("seen-events");
+var seen = seenStore.Load(() => new HashSet<string>());
 var recent = new Dictionary<string, List<DateTime>>();
 var window = TimeSpan.FromSeconds(15);
 await using var bus = new MessageBus();
