@@ -2,42 +2,44 @@ using RabbitMQ.Client;
 using System.Text;
 using System.Text.Json;
 
-public class MessageBus : IDisposable
+public sealed class MessageBus : IAsyncDisposable
 {
     private readonly IConnection _connection;
-    private readonly IModel _channel;
+    private readonly IChannel _channel;
 
     public MessageBus()
     {
-        var factory = new ConnectionFactory { HostName = "localhost" };
-        _connection = factory.CreateConnection();
-        _channel = _connection.CreateModel();
+        var factory = new ConnectionFactory
+        {
+            HostName = "localhost"
+        };
 
-        _channel.ExchangeDeclare(
+        _connection = factory.CreateConnectionAsync().GetAwaiter().GetResult();
+        _channel = _connection.CreateChannelAsync().GetAwaiter().GetResult();
+
+        _channel.ExchangeDeclareAsync(
             exchange: "ambient.stream",
             type: ExchangeType.Topic,
             durable: false
-        );
+        ).GetAwaiter().GetResult();
     }
 
     public void Publish(string routingKey, object message)
     {
-        Console.WriteLine($"BUS [{routingKey}] {message}");
         var body = Encoding.UTF8.GetBytes(
             JsonSerializer.Serialize(message)
         );
 
-        _channel.BasicPublish(
+        _channel.BasicPublishAsync(
             exchange: "ambient.stream",
             routingKey: routingKey,
-            basicProperties: null,
             body: body
-        );
+        ).GetAwaiter().GetResult();
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        _channel.Dispose();
-        _connection.Dispose();
+        await _channel.CloseAsync();
+        await _connection.CloseAsync();
     }
 }

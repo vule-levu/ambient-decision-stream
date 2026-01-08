@@ -4,6 +4,7 @@ var events = new List<DecisionChanged>();
 var seen = new HashSet<string>();
 var recent = new Dictionary<string, List<DateTime>>();
 var window = TimeSpan.FromSeconds(15);
+await using var bus = new MessageBus();
 
 
 for (var i = 1; i <= 20; i++)
@@ -45,9 +46,11 @@ void Emit(DecisionChanged evt)
         Console.WriteLine($"DUPLICATE IGNORED  {id[..8]}");
         return;
     }
-    Observe(evt);
+    Observe(evt);    
 
     Console.WriteLine($"ACCEPTED {id[..8]}  {evt}");
+    
+
     Thread.Sleep(random.Next(200, 800));
 }
 
@@ -76,6 +79,8 @@ void Observe(DecisionChanged evt)
             DateTime.UtcNow
         );
 
+        bus.Publish("ambient.signal", signal);
         Console.WriteLine($"AMBIENT {signal}");
+        timestamps.Clear();
     }
 }
